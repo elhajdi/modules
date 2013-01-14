@@ -1,0 +1,29 @@
+<html>
+  <head>
+    <title></title>
+  </head>
+  
+  <body>
+    <form action="/export/show/request">
+      <input type="text" name="properties" id="properties" value="${properties}"/>&nbsp;FROM&nbsp;<input type="text" name="entity" id="entity" value="${entity}"> 
+      <br />
+      WHERE <br />
+      <textarea rows="5" cols="50" name="where">${where}</textarea>
+      
+      <br/>CONDITIONS<br/>
+      <textarea rows="5" cols="20" name="conditions">${conditions}</textarea>
+      
+      <br /><input type="submit">
+    </form>
+    <div class="pagination">
+    #{if offset ==null || offset == 0}
+      <a href="#">last</a>
+    #{/if}
+    #{else}
+      <a href="${request.url}&offset=${offset - limit}">next</a>
+    #{/else}
+      <a href="${request.url}&offset=${limit + offset}">next</a>
+    </div>
+    ${results?.raw()}
+  </body>
+</html>

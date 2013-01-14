@@ -1,0 +1,14 @@
+package play.modules.utils;
+
+import play.PlayPlugin;
+
+
+/**
+ * @author Elhajdi
+ * 
+ */
+public class ExportPlugin extends PlayPlugin {
+    public void onApplicationStart() {
+	System.out.println("---------------> export started");
+    }
+}

@@ -1,0 +1,20 @@
+# This file defines all module routes (Higher priority routes first)
+#
+# import these routes in the main app as :
+# *     /                       module:export
+#
+# ~~~~
+
+#GET     /?                      Module.index
+
+########################################### Export  #################################
+POST    /export/launch/{entity}                                                     export.Exports.launchExport
+POST    /export/{entity}/{<[a-zA-Z0-9_-]{40}>token}                                 export.Exports.exports
+GET     /export/read/{entity}                                                       export.Exports.readBlob
+GET     /export/download/{<[a-zA-Z0-9_-]{40}>token}                                 export.Exports.downloadBlob
+POST    /export/request/{entity}                                                    export.Exports.requestExport
+*       /export/start                                                               export.Exports.startExport
+GET     /export/show                                                                export.Exports.show
+GET     /export/local/download/{<[a-zA-Z0-9_-]{40}>token}                           export.Exports.localDownloadBlob
+GET     /export/show/request                                                        export.Exports.showRequest
+
