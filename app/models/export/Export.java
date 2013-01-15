@@ -9,6 +9,7 @@ import java.io.PrintWriter;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.nio.channels.Channels;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
@@ -16,6 +17,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.SimpleFormatter;
 
 import models.BaseModel;
 import models.Variable;
@@ -142,7 +144,6 @@ public class Export extends Model {
    *          (prop, value) or (prop opertator, value)
    * @throws Exception
    */
-  @SuppressWarnings("deprecation")
   public static void export(String entityName, String token, Json filters, List<String> properties, String email) throws Exception {
     Export export =  Export.all().filter("token", token).get();
     int elementCount = 300;
@@ -166,10 +167,15 @@ public class Export extends Model {
         } else if (s.size() > 2) {
           throw new Exception("Syntax filter " + key + " is not correct");
         }
-        String aFilter = StringUtils.stripToEmpty(s.get(0));
+        String aFilter= StringUtils.stripToEmpty(s.get(0));
         if (!"".equals(aFilter)) {
-          Field afield = clazz.getField(aFilter);
-          String className = afield.getType().getName();//Double.class.getName()
+          Field afield = null;
+          try {
+            afield = clazz.getField(aFilter);
+          } catch (Exception e) {
+            break;
+          }
+          String className = afield.getType().getName();
           if (className.equals("boolean") || className.equals("java.lang.Boolean")) {
             q.addFilter(aFilter, Export.OPERATORS.get(s.get(1).toUpperCase()), Boolean.parseBoolean(StringUtils.stripToEmpty(filters.get(key).asString())));
           } else if (className.equals("int") || className.equals("java.lang.Integer")) {
@@ -180,6 +186,11 @@ public class Export extends Model {
             q.addFilter(aFilter, Export.OPERATORS.get(s.get(1).toUpperCase()), Double.parseDouble(StringUtils.stripToEmpty(filters.get(key).asString())));
           } else if (className.equals("float") || className.equals("java.lang.Float")) {
             q.addFilter(aFilter, Export.OPERATORS.get(s.get(1).toUpperCase()), Float.parseFloat(StringUtils.stripToEmpty(filters.get(key).asString())));
+          } else if (className.equals("java.util.Date")) {
+            String filterDate = StringUtils.stripToEmpty(filters.get(key).asString());
+            DateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+            Date date = format.parse(filterDate);
+            q.addFilter(aFilter, Export.OPERATORS.get(s.get(1).toUpperCase()), date );
           } else {
             q.addFilter(aFilter, Export.OPERATORS.get(s.get(1).toUpperCase()), StringUtils.stripToEmpty(filters.get(key).asString()));
           }
@@ -268,7 +279,7 @@ public class Export extends Model {
     if( !conditions.isEmpty()){
       for(String key : conditions.keys()){
         String value = (String) entity.getProperty(key);
-        if(!value.matches(conditions.get(key).asString())) {
+        if(value == null || !value.matches(conditions.get(key).asString())) {
           return;
         }
       }
@@ -295,7 +306,13 @@ public class Export extends Model {
           value += entity.getKey().getId() ;
         } else {
           Object o = mapProperties.get(property);
-          value += String.valueOf(o).replaceAll("\"", "\\\"") ;
+          
+          if(o instanceof java.util.Date) {
+            DateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss ");
+            value += format.format(o);
+          }else{
+            value += String.valueOf(o).replaceAll("\"", "\\\"") ;
+          }
         }
         value+= "\"";
         out.print(value);

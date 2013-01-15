@@ -1,6 +1,28 @@
 <html>
   <head>
     <title></title>
+    <script src="@{'/public/javascripts/jquery-1.6.4.min.js'}"></script>
+    <script>
+    $(document).ready(function(){
+      $('input.export').click(function(){
+          var params = {};
+          entity = $('input[name=entity]').val();
+          params.properties = $('input[name=properties]').val();
+          params.filters = $('textarea[name=filters]').text();
+          params.conditions = $('textarea[name=conditions]').text();
+          
+          var url = "/export/request/"+entity;
+          
+          $.post(url, params, function(data) {
+            if (data.success) {
+              alert(data.message);
+            } else {
+              alert(data.error);
+            }
+          });
+      });
+    });
+  </script>
   </head>
   
   <body>
@@ -8,22 +30,14 @@
       <input type="text" name="properties" id="properties" value="${properties}"/>&nbsp;FROM&nbsp;<input type="text" name="entity" id="entity" value="${entity}"> 
       <br />
       WHERE <br />
-      <textarea rows="5" cols="50" name="where">${where}</textarea>
+      <textarea rows="5" cols="50" name=filters>${where}</textarea>
       
       <br/>CONDITIONS<br/>
-      <textarea rows="5" cols="20" name="conditions">${conditions}</textarea>
+      <textarea rows="5" cols="50" name="conditions">${conditions}</textarea>
       
-      <br /><input type="submit">
+      <br /><input type="submit"> <input type="button" class="export" value="Export" />
     </form>
-    <div class="pagination">
-    #{if offset ==null || offset == 0}
-      <a href="#">last</a>
-    #{/if}
-    #{else}
-      <a href="${request.url}&offset=${offset - limit}">next</a>
-    #{/else}
-      <a href="${request.url}&offset=${limit + offset}">next</a>
-    </div>
     ${results?.raw()}
   </body>
+  
 </html>

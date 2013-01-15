@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.Field;
 import java.nio.channels.Channels;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
@@ -82,28 +84,28 @@ public class Exports extends Controller {
    */
   public static void requestExport(String entity, @As(",") List<String> properties, String filters, String email, String conditions) {
     if(entity == null){
-      renderJSON(Json.map().put("error", "you should specify the entity"));
+      renderJSON(Json.map().put("error", "you should specify the entity").toString());
     }
     if(properties == null){
-      renderJSON(Json.map().put("error", "you should specify some properties"));
+      renderJSON(Json.map().put("error", "you should specify some properties").toString());
     }
-    if(filters == null){
+    if(StringUtils.isBlank(filters)){
       filters = Json.map().toString();
     }else{
       try{
         Json j = Json.loads(filters);
       }catch(Exception e){
-        renderJSON(Json.map().put("error", "filters should be a json map"));
+        renderJSON(Json.map().put("error", "filters should be a json map").toString());
       }
     }
     
-    if(conditions == null){
+    if(StringUtils.isBlank(conditions)){
       conditions = Json.map().toString();
     }else{
       try{
         Json j = Json.loads(conditions);
       }catch(Exception e){
-        renderJSON(Json.map().put("error", "conditions should be a json map"));
+        renderJSON(Json.map().put("error", "conditions should be a json map").toString());
       }
     }
     Export export = Export.requestExport(entity, filters, properties, email, conditions);
@@ -288,16 +290,16 @@ public class Exports extends Controller {
     }
   }
   
-  @SuppressWarnings("deprecation")
   public static void showRequest(@As(",") List<String> properties, String entity) throws Exception {
-    String strProp = "";
-    if(entity == null) {
-      strProp = StringUtils.join(properties, ",");
-      renderArgs.put("properties", strProp);
-      renderTemplate("Exports/show.html", renderArgs);
+    if(StringUtils.isBlank(entity)) {
+      renderArgs.put("filters", params.get("filters"));
+      renderArgs.put("conditions", params.get("conditions"));
+      renderArgs.put("properties", StringUtils.join(properties, ","));
+      renderTemplate("Exports/show.html");
     }
     StringBuffer out = new StringBuffer();
-    String where = params.get("where");
+    String where = params.get("filters");
+    String cursor = params.get("cursor");
     if(StringUtils.isNotBlank(where)) {
 //      where = StringUtils.deleteWhitespace(where);
 //      where =  where.replaceAll(" (AND|And|ANd|aND|anD) ", "and");
@@ -307,7 +309,7 @@ public class Exports extends Controller {
     }
     Json filters = Json.loads(where);
     Query q = new Query(entity);
-    Class clazz = Class.forName("models."+entity);
+    Class clazz = Class.forName("models." + entity);
     // add filters to query
     if (filters != null) {
       for (Iterator<String> it = filters.keys().iterator(); it.hasNext();) {
@@ -319,10 +321,15 @@ public class Exports extends Controller {
           throw new Exception("Syntax filter " + key + " is not correct");
         }
         String aFilter= StringUtils.stripToEmpty(s.get(0));
-        if(!"".equals(aFilter)) {
-          Field afield = clazz.getField(aFilter);
-          String className = afield.getType().getName();//Double.class.getName()
-          if(className.equals("boolean") || className.equals("java.lang.Boolean")) {
+        if (!"".equals(aFilter)) {
+          Field afield = null;
+          try {
+            afield = clazz.getField(aFilter);
+          } catch (Exception e) {
+            break;
+          }
+          String className = afield.getType().getName();
+          if (className.equals("boolean") || className.equals("java.lang.Boolean")) {
             q.addFilter(aFilter, Export.OPERATORS.get(s.get(1).toUpperCase()), Boolean.parseBoolean(StringUtils.stripToEmpty(filters.get(key).asString())));
           } else if (className.equals("int") || className.equals("java.lang.Integer")) {
             q.addFilter(aFilter, Export.OPERATORS.get(s.get(1).toUpperCase()), Integer.parseInt(StringUtils.stripToEmpty(filters.get(key).asString())));
@@ -330,10 +337,14 @@ public class Exports extends Controller {
             q.addFilter(aFilter, Export.OPERATORS.get(s.get(1).toUpperCase()), Long.parseLong(StringUtils.stripToEmpty(filters.get(key).asString())));
           } else if (className.equals("double") || className.equals("java.lang.Double")) {
             q.addFilter(aFilter, Export.OPERATORS.get(s.get(1).toUpperCase()), Double.parseDouble(StringUtils.stripToEmpty(filters.get(key).asString())));
-          }  else if (className.equals("float") || className.equals("java.lang.Float")) {
+          } else if (className.equals("float") || className.equals("java.lang.Float")) {
             q.addFilter(aFilter, Export.OPERATORS.get(s.get(1).toUpperCase()), Float.parseFloat(StringUtils.stripToEmpty(filters.get(key).asString())));
-          } 
-          else {
+          } else if (className.equals("java.util.Date")) {
+            String filterDate = StringUtils.stripToEmpty(filters.get(key).asString());
+            DateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+            Date date = format.parse(filterDate);
+            q.addFilter(aFilter, Export.OPERATORS.get(s.get(1).toUpperCase()), date);
+          } else {
             q.addFilter(aFilter, Export.OPERATORS.get(s.get(1).toUpperCase()), StringUtils.stripToEmpty(filters.get(key).asString()));
           }
         }
@@ -345,7 +356,7 @@ public class Exports extends Controller {
     }catch(Exception e) {
     }
     
-    int limit = 30;
+    int limit = 100;
     try{
       limit = Integer.parseInt(params.get("limit"));
     }catch (NumberFormatException nfe) {
@@ -380,11 +391,8 @@ public class Exports extends Controller {
       }
       out.append("</table>");
     }
-    if(properties != null && !properties.isEmpty()) {
-      strProp = StringUtils.join(properties, ",");
-    }
     
-    renderArgs.put("properties", strProp);
+    renderArgs.put("properties", StringUtils.join(properties, ","));
     renderArgs.put("entity", entity);
     renderArgs.put("where", where);
     renderArgs.put("conditions", conditions);
@@ -396,7 +404,6 @@ public class Exports extends Controller {
   }
   
   private static void writeEntity(Entity entity, StringBuffer out, List<String> properties, Json conditions) {
-    out.append("<tr>");
     if( !conditions.isEmpty()){
       for(String key : conditions.keys()){
         String value = (String) entity.getProperty(key);
@@ -405,13 +412,20 @@ public class Exports extends Controller {
         }
       }
     }
+    out.append("<tr>");
     Map<String, Object> mapProperties = entity.getProperties();
     if (properties == null) {
       for (Iterator<String> itProp = mapProperties.keySet().iterator(); itProp.hasNext();) {
         String property = itProp.next();
         out.append("<td>");
         // write on the blob
-        out.append(mapProperties.get(property));
+        Object o = mapProperties.get(property);
+        if(o instanceof java.util.Date) {
+          DateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss ");
+          out.append(format.format(o));
+        }else{
+          out.append(String.valueOf(o));
+        }
         //check if we reach the last element
         out.append("</td>");
       }
@@ -425,7 +439,12 @@ public class Exports extends Controller {
           out.append(entity.getKey().getId() );
         } else {
           Object o = mapProperties.get(property);
-          out.append(String.valueOf(o));
+          if(o instanceof java.util.Date) {
+            DateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss ");
+            out.append(format.format(o));
+          }else{
+            out.append(String.valueOf(o));
+          }
         }
         out.append("</td>");
       }
