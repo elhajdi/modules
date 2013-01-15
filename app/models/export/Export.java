@@ -142,6 +142,7 @@ public class Export extends Model {
    *          (prop, value) or (prop opertator, value)
    * @throws Exception
    */
+  @SuppressWarnings("deprecation")
   public static void export(String entityName, String token, Json filters, List<String> properties, String email) throws Exception {
     Export export =  Export.all().filter("token", token).get();
     int elementCount = 300;
@@ -154,6 +155,7 @@ public class Export extends Model {
     }
 
     Query q = new Query(entityName);
+    Class clazz = Class.forName("models."+entityName);
     // add filters to query
     if (filters != null) {
       for (Iterator<String> it = filters.keys().iterator(); it.hasNext();) {
@@ -164,9 +166,24 @@ public class Export extends Model {
         } else if (s.size() > 2) {
           throw new Exception("Syntax filter " + key + " is not correct");
         }
-        String aFilter= StringUtils.stripToEmpty(s.get(0));
-        if(!"".equals(aFilter))
-        q.addFilter(aFilter, OPERATORS.get(s.get(1).toUpperCase()), StringUtils.stripToEmpty(filters.get(key).asString()));
+        String aFilter = StringUtils.stripToEmpty(s.get(0));
+        if (!"".equals(aFilter)) {
+          Field afield = clazz.getField(aFilter);
+          String className = afield.getType().getName();//Double.class.getName()
+          if (className.equals("boolean") || className.equals("java.lang.Boolean")) {
+            q.addFilter(aFilter, Export.OPERATORS.get(s.get(1).toUpperCase()), Boolean.parseBoolean(StringUtils.stripToEmpty(filters.get(key).asString())));
+          } else if (className.equals("int") || className.equals("java.lang.Integer")) {
+            q.addFilter(aFilter, Export.OPERATORS.get(s.get(1).toUpperCase()), Integer.parseInt(StringUtils.stripToEmpty(filters.get(key).asString())));
+          } else if (className.equals("long") || className.equals("java.lang.Long")) {
+            q.addFilter(aFilter, Export.OPERATORS.get(s.get(1).toUpperCase()), Long.parseLong(StringUtils.stripToEmpty(filters.get(key).asString())));
+          } else if (className.equals("double") || className.equals("java.lang.Double")) {
+            q.addFilter(aFilter, Export.OPERATORS.get(s.get(1).toUpperCase()), Double.parseDouble(StringUtils.stripToEmpty(filters.get(key).asString())));
+          } else if (className.equals("float") || className.equals("java.lang.Float")) {
+            q.addFilter(aFilter, Export.OPERATORS.get(s.get(1).toUpperCase()), Float.parseFloat(StringUtils.stripToEmpty(filters.get(key).asString())));
+          } else {
+            q.addFilter(aFilter, Export.OPERATORS.get(s.get(1).toUpperCase()), StringUtils.stripToEmpty(filters.get(key).asString()));
+          }
+        }
       }
     }
 

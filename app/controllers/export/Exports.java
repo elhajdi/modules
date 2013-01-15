@@ -6,6 +6,7 @@ package controllers.export;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.lang.reflect.Field;
 import java.nio.channels.Channels;
 import java.util.Arrays;
 import java.util.Date;
@@ -287,13 +288,16 @@ public class Exports extends Controller {
     }
   }
   
+  @SuppressWarnings("deprecation")
   public static void showRequest(@As(",") List<String> properties, String entity) throws Exception {
+    String strProp = "";
     if(entity == null) {
-      renderTemplate("Exports/show.html");
+      strProp = StringUtils.join(properties, ",");
+      renderArgs.put("properties", strProp);
+      renderTemplate("Exports/show.html", renderArgs);
     }
     StringBuffer out = new StringBuffer();
     String where = params.get("where");
-    String cursor = params.get("cursor");
     if(StringUtils.isNotBlank(where)) {
 //      where = StringUtils.deleteWhitespace(where);
 //      where =  where.replaceAll(" (AND|And|ANd|aND|anD) ", "and");
@@ -303,6 +307,7 @@ public class Exports extends Controller {
     }
     Json filters = Json.loads(where);
     Query q = new Query(entity);
+    Class clazz = Class.forName("models."+entity);
     // add filters to query
     if (filters != null) {
       for (Iterator<String> it = filters.keys().iterator(); it.hasNext();) {
@@ -314,8 +319,24 @@ public class Exports extends Controller {
           throw new Exception("Syntax filter " + key + " is not correct");
         }
         String aFilter= StringUtils.stripToEmpty(s.get(0));
-        if(!"".equals(aFilter))
-        q.addFilter(aFilter, Export.OPERATORS.get(s.get(1).toUpperCase()), StringUtils.stripToEmpty(filters.get(key).asString()));
+        if(!"".equals(aFilter)) {
+          Field afield = clazz.getField(aFilter);
+          String className = afield.getType().getName();//Double.class.getName()
+          if(className.equals("boolean") || className.equals("java.lang.Boolean")) {
+            q.addFilter(aFilter, Export.OPERATORS.get(s.get(1).toUpperCase()), Boolean.parseBoolean(StringUtils.stripToEmpty(filters.get(key).asString())));
+          } else if (className.equals("int") || className.equals("java.lang.Integer")) {
+            q.addFilter(aFilter, Export.OPERATORS.get(s.get(1).toUpperCase()), Integer.parseInt(StringUtils.stripToEmpty(filters.get(key).asString())));
+          } else if (className.equals("long") || className.equals("java.lang.Long")) {
+            q.addFilter(aFilter, Export.OPERATORS.get(s.get(1).toUpperCase()), Long.parseLong(StringUtils.stripToEmpty(filters.get(key).asString())));
+          } else if (className.equals("double") || className.equals("java.lang.Double")) {
+            q.addFilter(aFilter, Export.OPERATORS.get(s.get(1).toUpperCase()), Double.parseDouble(StringUtils.stripToEmpty(filters.get(key).asString())));
+          }  else if (className.equals("float") || className.equals("java.lang.Float")) {
+            q.addFilter(aFilter, Export.OPERATORS.get(s.get(1).toUpperCase()), Float.parseFloat(StringUtils.stripToEmpty(filters.get(key).asString())));
+          } 
+          else {
+            q.addFilter(aFilter, Export.OPERATORS.get(s.get(1).toUpperCase()), StringUtils.stripToEmpty(filters.get(key).asString()));
+          }
+        }
       }
     }
     Json conditions = Json.map();
@@ -359,8 +380,11 @@ public class Exports extends Controller {
       }
       out.append("</table>");
     }
+    if(properties != null && !properties.isEmpty()) {
+      strProp = StringUtils.join(properties, ",");
+    }
     
-    renderArgs.put("properties", StringUtils.join(properties, ","));
+    renderArgs.put("properties", strProp);
     renderArgs.put("entity", entity);
     renderArgs.put("where", where);
     renderArgs.put("conditions", conditions);
