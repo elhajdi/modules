@@ -146,7 +146,7 @@ public class Export extends Model {
    */
   public static void export(String entityName, String token, Json filters, List<String> properties, String email) throws Exception {
     Export export =  Export.all().filter("token", token).get();
-    int elementCount = 300;
+    int elementCount = 500;
     FetchOptions fetchOptions = FetchOptions.Builder.withLimit(elementCount);
     String startCursor = export.cursor;// Variable.get(entityName + "_cursor");
 
@@ -330,7 +330,7 @@ public class Export extends Model {
   }
 
   public void sendExportMail(){
-    notifiers.export.MailerNotification.sendExportNotifiation(this.email, this.entity, this.token);
+    notifiers.export.MailerNotification.sendExportNotifiation(this);
   }
 
   public String toString() {
@@ -356,3 +356,4 @@ public class Export extends Model {
   }
 
 }
+

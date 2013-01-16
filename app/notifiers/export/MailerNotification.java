@@ -16,6 +16,8 @@ import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
 
+import models.export.Export;
+
 import play.Logger;
 import play.mvc.Http.Request;
 import play.mvc.Mailer;
@@ -26,23 +28,23 @@ import play.vfs.VirtualFile;
 public class MailerNotification extends Mailer {
   private static final String YALA_NOREPLY_MAIL = "noreply@yala.fm";
 
-  public static void sendExportNotifiation(String email, String entity, String token) {
+  public static void sendExportNotifiation(Export export) {
     String tempfile = "";
-    String resetLink = Request.current().getBase() + "/export/download/" + token;
+    String resetLink = Request.current().getBase() + "/export/download/" + export.token;
     System.out.println(resetLink);
     try {
       tempfile = readTemplate("/app/views/MailerNotification/export.html");
     } catch (Exception e) {
       Logger.error(e, e.getMessage());
     }
-    String subject = "Export of " + entity + " has finished";
+    String subject = "Export of: SELECT "+ export.properties + " FROM "+ export.entity + "WHERE "+export.filters+" WITH CONDITIONS " + export.conditions;
     Map<String, Object> objs = new HashMap<String, Object>();
     objs.put("messageTitle", subject);
     objs.put("resetLink", resetLink);
     BaseTemplate template = TemplateLoader.loadString(tempfile);
     String rendered = template.render(objs);
 //    System.out.println(rendered);
-    sendEmail(YALA_NOREPLY_MAIL, email, subject, rendered);
+    sendEmail(YALA_NOREPLY_MAIL, export.email, subject, rendered);
   }
 
   private static String readTemplate(String filePath) throws java.io.IOException {

@@ -372,6 +372,7 @@ public class Exports extends Controller {
     
     DatastoreService datastore = DatastoreServiceFactory.getDatastoreService();
     PreparedQuery pq = datastore.prepare(q);
+    try {
     QueryResultList<Entity> results = pq.asQueryResultList(fetchOptions);
     if(!results.isEmpty()) {
       out.append("<table border='1' style='margin:0 5px;'>");
@@ -391,7 +392,11 @@ public class Exports extends Controller {
       }
       out.append("</table>");
     }
-    
+  }catch(Exception e) {
+    String error = e.getMessage()+"\n"+StringUtils.join(e.getStackTrace(),"\n");
+    renderArgs.put("error", error);
+    render("Exports/show.html", renderArgs);
+  }
     renderArgs.put("properties", StringUtils.join(properties, ","));
     renderArgs.put("entity", entity);
     renderArgs.put("where", where);
@@ -453,3 +458,4 @@ public class Exports extends Controller {
   }
 
 }
+

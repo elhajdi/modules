@@ -6,10 +6,11 @@
     $(document).ready(function(){
       $('input.export').click(function(){
           var params = {};
-          entity = $('input[name=entity]').val();
-          params.properties = $('input[name=properties]').val();
-          params.filters = $('textarea[name=filters]').text();
-          params.conditions = $('textarea[name=conditions]').text();
+          entity = $('#entity').val();
+          params.properties = $('#properties').val();
+          params.email = $('#email').val();
+          params.filters = $('#filters').val();
+          params.conditions = $('#conditions').val();
           
           var url = "/export/request/"+entity;
           
@@ -27,16 +28,24 @@
   
   <body>
     <form action="/export/show/request">
-      <input type="text" name="properties" id="properties" value="${properties}"/>&nbsp;FROM&nbsp;<input type="text" name="entity" id="entity" value="${entity}"> 
+      <input type="text" name="properties" id="properties" value="${properties}" style="width:200px"/><br/>
+      FROM&nbsp;<input type="text" name="entity" id="entity" value="${entity}"> 
       <br />
       WHERE <br />
-      <textarea rows="5" cols="50" name=filters>${where}</textarea>
+      <textarea rows="5" cols="50" name="filters" id="filters">${where}</textarea>
       
       <br/>CONDITIONS<br/>
-      <textarea rows="5" cols="50" name="conditions">${conditions}</textarea>
+      <textarea rows="5" cols="50" name="conditions" id="conditions">${conditions}</textarea>
       
-      <br /><input type="submit"> <input type="button" class="export" value="Export" />
+      <br /><input type="submit"> 
+      <div style="margin:15px 0">
+        <label for="email">Email</label>&nbsp;<input type="text" name="email" id="email" /> &nbsp;
+        <input type="button" class="export" value="Export" />
+      </div>
     </form>
+    #{if error}
+      ${error}
+    #{/if}
     ${results?.raw()}
   </body>
   
